@@ -1,0 +1,72 @@
+<?php
+// login.php
+include 'config.php';
+
+if (isset($_SESSION['user_id'])) {
+    header("Location: index.php");
+    exit;
+}
+
+$error = "";
+$msg = $_SESSION['msg'] ?? '';
+unset($_SESSION['msg']);
+
+if (isset($_POST['login'])) {
+    $username = $_POST['username'];
+    $password = $_POST['password'];
+
+    $stmt = mysqli_prepare($conn, "SELECT id, username, password, role FROM users WHERE username = ?");
+    mysqli_stmt_bind_param($stmt, "s", $username);
+    mysqli_stmt_execute($stmt);
+    $user = mysqli_fetch_assoc(mysqli_stmt_get_result($stmt));
+
+    if ($user && password_verify($password, $user['password'])) {
+        session_regenerate_id(true);
+        $_SESSION['user_id']  = $user['id'];
+        $_SESSION['username'] = $user['username'];
+        $_SESSION['role']     = $user['role'];
+
+        if ($user['role'] === 'admin') {
+            header("Location: admin/index.php");
+        } else {
+            header("Location: index.php");
+        }
+        exit;
+    } else {
+        $error = "Incorrect username or password.";
+    }
+}
+?>
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Login</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+</head>
+<body class="bg-light">
+    <?php include 'navbar.php'; ?>
+    <div class="container mt-5" style="max-width: 420px;">
+        <div class="card shadow-sm">
+            <div class="card-header bg-dark text-white"><h5 class="mb-0">Login</h5></div>
+            <div class="card-body">
+                <?php if ($msg): ?><div class="alert alert-success py-2"><?= e($msg) ?></div><?php endif; ?>
+                <?php if ($error): ?><div class="alert alert-danger py-2"><?= e($error) ?></div><?php endif; ?>
+                <form method="POST" action="">
+                    <div class="mb-3">
+                        <label for="username" class="form-label">Username</label>
+                        <input type="text" class="form-control" id="username" name="username" required autofocus>
+                    </div>
+                    <div class="mb-4">
+                        <label for="password" class="form-label">Password</label>
+                        <input type="password" class="form-control" id="password" name="password" required>
+                    </div>
+                    <div class="d-grid"><button type="submit" name="login" class="btn btn-dark">Login</button></div>
+                </form>
+                <p class="mt-3 mb-0 small">No account yet? <a href="register.php">Register</a></p>
+            </div>
+        </div>
+    </div>
+</body>
+</html>
